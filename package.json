@@ -1,0 +1,24 @@
+{
+  "name": "@edenjs/shop-eway",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eden-js/shop-eway.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/eden-js/shop-eway/issues"
+  },
+  "homepage": "https://github.com/eden-js/shop-eway#readme",
+  "dependencies": {
+    "eway-rapid": "^1.2.1",
+    "money-math": "^2.5.1",
+    "uuid": "^3.3.2"
+  }
+}
