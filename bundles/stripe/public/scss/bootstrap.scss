@@ -1,0 +1,31 @@
+
+.card.card-stripe {
+  // alter border color
+  border-color : map-get($grays, 100);
+
+  // alter hover border
+  &:hover {
+    border-color : map-get($grays, 200);
+  }
+
+  // alter success
+  &.card-address-active {
+    border-color : theme-color("success");
+  }
+
+  // set value
+  > .card-block {
+    color           : $body-color;
+    padding         : $spacer;
+    text-decoration : none;
+
+    > p {
+      font-size : $font-size-sm;
+    }
+  }
+}
+
+.stripe-logo {
+  width  : auto;
+  height : ($spacer * 2);
+}

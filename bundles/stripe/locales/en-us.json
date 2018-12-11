@@ -1,0 +1,20 @@
+{
+  "stripe" : {
+    "method" : "Checkout with Credit Card",
+    "create" : "Add Card",
+
+    "order" : {
+      "paid"     : "Paid with Credit Card",
+      "pending"  : "Credit Card payment pending"
+    }
+  },
+  "alipay" : {
+    "method" : "Checkout with Alipay",
+
+    "order" : {
+      "paid"     : "Paid with Alipay",
+      "pending"  : "Alipay payment pending",
+      "redirect" : "Redirect to Alipay checkout"
+    }
+  }
+}
