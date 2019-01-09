@@ -1,23 +1,23 @@
-<stripe-method>
+<eway-method>
   <a href="#!" onclick={ onSelect }>
     <div class="row">
       <div class="col-8 d-flex align-items-center">
         <div class="w-100">
           <div class="custom-control custom-radio p-0">
-            <input name="payment-method-{ Math.random() }" value="stripe" type="radio" class="custom-control-input" checked={ this.selected && (!Object.keys(opts.val).length || opts.val.type === 'stripe') }>
-            <label class="custom-control-label pl-2">{ this.t('stripe.method') }</label>
+            <input name="payment-method-{ Math.random() }" value="eway" type="radio" class="custom-control-input" checked={ this.selected && (!Object.keys(opts.val).length || opts.val.type === 'eway') }>
+            <label class="custom-control-label pl-2">{ this.t('eway.method') }</label>
           </div>
         </div>
       </div>
       <div class="col-4 text-right">
-        <img src="/public/assets/images/vendor/stripe.svg" class="stripe-logo" />
+        <img src="/public/assets/images/vendor/eway.svg" class="eway-logo" />
       </div>
     </div>
   </a>
-  <div if={ this.selected && (!Object.keys(opts.val).length || opts.val.type === 'stripe') } class="w-100 px-3">
+  <div if={ this.selected && (!Object.keys(opts.val).length || opts.val.type === 'eway') } class="w-100 px-3">
     <div class="row row-eq-height row-cards pt-3 mb-3" if={ ((opts.method.data || {}).cards || []).length }>
       <div class="col-6 col-md-4 pb-3" each={ card, i in ((opts.method.data || {}).cards || []) }>
-        <div class={ 'card card-stripe h-100' : true, 'active' : isCard(card) }>
+        <div class={ 'card card-eway h-100' : true, 'active' : isCard(card) }>
           <a href="#!" class="card-body" onclick={ onCard }>
             <h2 class="text-right">
               <i class="fab fa-cc-{ card.brand }" />
@@ -79,7 +79,7 @@
 
   <script>
     // do mixins
-    this.mixin ('i18n');
+    this.mixin('i18n');
 
     // set values
     this.loading  = false;
@@ -92,13 +92,13 @@
      */
     onCard (e) {
       // prevent default
-      e.preventDefault ();
+      e.preventDefault();
 
       // set card
       opts.method.data.card = e.item.card;
 
       // on ready
-      opts.onReady (opts.method);
+      opts.onReady(opts.method);
     }
 
     /**
@@ -109,16 +109,16 @@
     onSelect (e) {
       // check method
       if (!opts.method.data.card) {
-        opts.onReady (null);
+        opts.onReady(null);
       } else {
-        opts.onReady (opts.method);
+        opts.onReady(opts.method);
       }
 
       // select
       this.selected = true;
 
       // update view
-      this.update ();
+      this.update();
     }
 
     /**
@@ -128,12 +128,12 @@
      */
     onChange (e) {
       // return false on details
-      if (['csc', 'name', 'number', 'year', 'month'].find ((test) => !jQuery (this.refs[test]).val ().length)) {
-        return console.log ('here');
+      if (['csc', 'name', 'number', 'year', 'month'].find((test) => !jQuery(this.refs[test]).val().length)) {
+        return console.log('here');
       }
 
       // get name and address
-      let save = jQuery (this.refs.save).is (':checked');
+      let save = jQuery(this.refs.save).is(':checked');
       let card = {
         'csc'  : this.refs.csc.value,
         'name' : this.refs.name.value,
@@ -151,7 +151,7 @@
       opts.method.data = { save, card };
 
       // on ready
-      opts.onReady (opts.method);
+      opts.onReady(opts.method);
     }
 
     /**
@@ -167,4 +167,4 @@
     }
 
   </script>
-</stripe-method>
+</eway-method>

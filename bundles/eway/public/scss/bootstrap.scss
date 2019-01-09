@@ -1,5 +1,5 @@
 
-.card.card-stripe {
+.card.card-eway {
   // alter border color
   border-color : map-get($grays, 100);
 
@@ -25,7 +25,7 @@
   }
 }
 
-.stripe-logo {
+.eway-logo {
   width  : auto;
   height : ($spacer * 2);
 }

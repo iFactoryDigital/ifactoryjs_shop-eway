@@ -1,7 +1,8 @@
+
 // Require dependencies
-const uuid   = require('uuid');
-const money  = require('money-math');
-const stripe = require('stripe');
+const eway  = require('eway-rapid');
+const uuid  = require('uuid');
+const money = require('money-math');
 
 // Require local dependencies
 const config = require('config');
@@ -10,28 +11,28 @@ const config = require('config');
 const PaymentMethodController = require('payment/controllers/method');
 
 // Require models
-const Data    = model('stripe');
+const Data    = model('eway');
 const Product = model('product');
 
 // require helpers
 const ProductHelper = helper('product');
 
 /**
- * Create Stripe Controller class
+ * Create Eway Controller class
  *
  * @extends PaymentMethodController
  */
-class StripeController extends PaymentMethodController {
+class EwayController extends PaymentMethodController {
 
   /**
-   * Construct Stripe Controller class
+   * Construct Eway Controller class
    */
   constructor () {
     // Run super
     super();
 
     // Set private variables
-    this._stripe = stripe(config.get('stripe.secret'));
+    this._eway = eway.createClient(config.get('eway.key'), config.get('eway.password'), config.get('eway.endpoint'));
 
     // Bind private methods
     this._createSource = this._createSource.bind(this);
@@ -40,96 +41,11 @@ class StripeController extends PaymentMethodController {
     this._pay    = this._pay.bind(this);
     this._method = this._method.bind(this);
 
-    // On checkout init
-    this.eden.pre('order.stripe',  this._paymentRequest);
-    this.eden.pre('checkout.init', this._checkout);
-
-    // Use middleware
-    this.eden.router.use(this._middleware);
-
     // Hook view state
     this.eden.pre('view.compile', (render) => {
       // Set config
-      render.config.stripe = config.get('stripe.client');
+      render.config.eway = config.get('eway.client');
     });
-  }
-
-  /**
-   * Checkout order
-   *
-   * @param  {Object} order
-   */
-  _checkout (order) {
-    // Add action
-    order.set('actions.stripe', {
-      'type'     : 'stripe',
-      'data'     : {},
-      'priority' : 10
-    });
-  }
-
-  /**
-   * on shipping
-   *
-   * @param  {order}   Order
-   * @param  {Object}  action
-   *
-   * @return {Promise}
-   */
-  async _paymentRequest (order, action, actions) {
-    // set shipping
-    let user    = await order.get('user');
-    let invoice = await order.get('invoice');
-
-    // check action value
-    if (!action.value || !Object.keys(action.value).length) return;
-
-    // check user
-    if (user) {
-      // lock user
-      await user.lock();
-
-      // set email
-      user.set('name',  user.get('name')  || action.value.payerName);
-      user.set('email', user.get('email') || action.value.payerEmail);
-
-      // save user
-      await user.save();
-
-      // unlock user
-      user.unlock();
-    }
-
-    // find payment action
-    let paymentAction = actions.find((check) => check.type === 'payment');
-
-    // set value
-    paymentAction.value = {
-      'type'    : 'stripe',
-      'data'    : action.value.token,
-      'request' : true
-    };
-
-    // set actions
-    order.set('actions', actions);
-  }
-
-  /**
-   * stripe middleware
-   *
-   * @param {req} req
-   * @param {res} res
-   * @param {Function} next
-   */
-  _middleware (req, res, next) {
-    // set footer
-    let ft = '<script src="//js.stripe.com/v3/"></script>';
-
-    // set head
-    res.locals.page.script = (res.locals.page.script || '') + ft;
-
-    // run next
-    next();
   }
 
   /**
@@ -159,7 +75,7 @@ class StripeController extends PaymentMethodController {
       if (!user) {
         // Set error
         payment.set('error', {
-          'id'   : 'stipe.nouser',
+          'id'   : 'eway.nouser',
           'text' : 'Invalid user'
         });
 
@@ -167,6 +83,7 @@ class StripeController extends PaymentMethodController {
         return false;
       }
 
+      // find card
       const card = data && (data.get('cards') || []).find((card) => {
         // Return card id check
         return card.id = method.card.id;
@@ -176,7 +93,7 @@ class StripeController extends PaymentMethodController {
       if (!card) {
         // Set error
         payment.set('error', {
-          'id'   : 'stipe.notfound',
+          'id'   : 'eway.notfound',
           'text' : 'Credit card not found'
         });
 
@@ -193,34 +110,33 @@ class StripeController extends PaymentMethodController {
 
     // Try/catch
     try {
+      // Set req
+      const req = method.card;
+
       // Set customer
-      const customer = data ? data.get('customer') : (await this._stripe.customers.create({
-        'email' : user ? user.get('email') : 'anonymous'
-      })).id;
+      const card = client.createCustomer(eway.Enum.Method.DIRECT, {
+         'Title'       : 'Mr.',
+         'Country'     : 'au',
+         'LastName'    : req.name.split(' ')[1],
+         'FirstName'   : req.name.split(' ')[0],
+         'CardDetails' : {
+           'CVN'         : req.cvc,
+           'Name'        : req.name,
+           'Number'      : req.number,
+           'ExpiryYear'  : req.expiry.year,
+           'ExpiryMonth' : req.expiry.month
+         }
+      });
+
+      console.log(card); return;
 
       // Check data and save
       if (user && !data && method.save) {
         // Create new data
         data = new Data({
-          'user'     : user,
-          'customer' : customer
+          'user' : user
         });
       }
-
-      // Set req
-      const req = method.card;
-
-      // Create card
-      const card = await this._stripe.customers.createSource(customer, {
-        'source' : {
-          'cvc'       : req.cvc,
-          'name'      : req.name,
-          'number'    : req.number,
-          'object'    : 'card',
-          'exp_year'  : req.expiry.year,
-          'exp_month' : req.expiry.month
-        }
-      });
 
       // Check save
       if (method.save && data) {
@@ -228,14 +144,7 @@ class StripeController extends PaymentMethodController {
         const cards = data.get('cards') || [];
 
         // Push new card to cards
-        cards.push({
-          'id'      : uuid(),
-          'brand'   : card.brand.toLowerCase(),
-          'last4'   : card.last4,
-          'source'  : card.id,
-          'funding' : card.funding,
-          'country' : card.country
-        });
+        cards.push(card);
 
         // Update data
         data.set('cards', cards);
@@ -246,13 +155,12 @@ class StripeController extends PaymentMethodController {
 
       // Return source
       return {
-        'source'   : card.id,
-        'customer' : customer
+        'source' : card.id
       };
     } catch (e) {
       // Set error
       payment.set('error', {
-        'id'   : 'stipe.error',
+        'id'   : 'eway.error',
         'text' : e.toString()
       });
 
@@ -274,14 +182,14 @@ class StripeController extends PaymentMethodController {
     // Check super
     if (!await super._method(order, action)) return;
 
-    // Load Stripe data for user
+    // Load Eway data for user
     const data = await Data.findOne({
       'user.id' : order.get('user.id')
     });
 
-    // Add Stripe Payment Method
+    // Add Eway Payment Method
     action.data.methods.push({
-      'type'     : 'stripe',
+      'type'     : 'eway',
       'data'     : data ? await data.sanitise() : {},
       'priority' : 0
     });
@@ -297,7 +205,7 @@ class StripeController extends PaymentMethodController {
    */
   async _pay (payment) {
     // Check super
-    if (!await super._pay(payment) || payment.get('method.type') !== 'stripe') return;
+    if (!await super._pay(payment) || payment.get('method.type') !== 'eway') return;
 
     // set source
     let source = null;
@@ -408,7 +316,7 @@ class StripeController extends PaymentMethodController {
           let item = subscriptionItems.find((i) => i.product = subscription.get('product.id') && i.period === subscription.get('period'));
 
           // create plan
-          let plan = await this._stripe.plans.create({
+          let plan = await this._eway.plans.create({
             'amount'   : zeroDecimal.indexOf(currency.toUpperCase()) > -1 ? parseInt(item.price) : parseInt(parseFloat(item.price) * 100),
             'product'  : {
               'name' : 'Subscription #' + subscription.get('_id').toString()
@@ -418,12 +326,12 @@ class StripeController extends PaymentMethodController {
             'interval_count' : periods[item.period].interval_count
           });
 
-          // set stripe
+          // set eway
           subscription.set('plan', plan);
         }));
 
         // create actual subscription
-        let charge = await this._stripe.subscriptions.create({
+        let charge = await this._eway.subscriptions.create({
           'items' : subscriptions.map((subscription) => {
             return {
               'plan' : subscription.get('plan.id')
@@ -469,7 +377,7 @@ class StripeController extends PaymentMethodController {
       }
 
       // Create chargs
-      const charge = await this._stripe.charges.create(data);
+      const charge = await this._eway.charges.create(data);
 
       // Set charge
       payment.set('data', {
@@ -481,7 +389,7 @@ class StripeController extends PaymentMethodController {
     } catch (e) {
       // Set error
       payment.set('error', {
-        'id'   : 'stipe.error',
+        'id'   : 'eway.error',
         'text' : e.toString()
       });
 
@@ -493,8 +401,8 @@ class StripeController extends PaymentMethodController {
 }
 
 /**
- * Export Stripe Controller class
+ * Export Eway Controller class
  *
- * @type {StripeController}
+ * @type {EwayController}
  */
-exports = module.exports = StripeController;
+exports = module.exports = EwayController;

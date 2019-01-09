@@ -3,9 +3,9 @@
 const Model = require('model');
 
 /**
- * create stripe class
+ * create eway class
  */
-class Stripe extends Model {
+class Eway extends Model {
   /**
    * construct item model
    *
@@ -41,8 +41,8 @@ class Stripe extends Model {
 }
 
 /**
- * export stripe class
+ * export eway class
  *
- * @type {stripe}
+ * @type {eway}
  */
-exports = module.exports = Stripe;
+exports = module.exports = Eway;

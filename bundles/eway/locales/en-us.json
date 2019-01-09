@@ -1,0 +1,12 @@
+{
+  "eway" : {
+    "title"  : "Eway",
+    "method" : "Checkout with Credit Card",
+    "create" : "Add Card",
+
+    "order" : {
+      "paid"     : "Paid with Credit Card",
+      "pending"  : "Credit Card payment pending"
+    }
+  }
+}
