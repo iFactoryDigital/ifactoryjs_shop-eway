@@ -114,7 +114,7 @@ class EwayController extends PaymentMethodController {
       const req = method.card;
 
       // Set customer
-      const card = client.createCustomer(eway.Enum.Method.DIRECT, {
+      const card = (await this._eway.createCustomer(eway.Enum.Method.DIRECT, {
          'Title'       : 'Mr.',
          'Country'     : 'au',
          'LastName'    : req.name.split(' ')[1],
@@ -126,9 +126,7 @@ class EwayController extends PaymentMethodController {
            'ExpiryYear'  : req.expiry.year,
            'ExpiryMonth' : req.expiry.month
          }
-      });
-
-      console.log(card); return;
+      })).attributes;
 
       // Check data and save
       if (user && !data && method.save) {
@@ -153,9 +151,11 @@ class EwayController extends PaymentMethodController {
         await data.save();
       }
 
+      console.log(card);
+
       // Return source
       return {
-        'source' : card.id
+        'source' : card.Customer.TokenCustomerID
       };
     } catch (e) {
       // Set error
@@ -240,114 +240,7 @@ class EwayController extends PaymentMethodController {
 
       // get subscriptions
       if (subscriptions && subscriptions.length) {
-        // let items
-        let subscriptionItems = (await Promise.all(invoice.get('lines').map(async (line) => {
-          // get product
-          let product = await Product.findById(line.product);
 
-          // get price
-          let price = await ProductHelper.price(product, line.opts || {});
-
-          // return value
-          let amount = parseFloat(price.amount) * parseInt(line.qty || 1);
-
-          // hook
-          await this.eden.hook('line.price', {
-            'qty'  : line.qty,
-            'user' : await order.get('user'),
-            'opts' : line.opts,
-
-            order,
-            price,
-            amount,
-            product
-          });
-
-          // return object
-          return {
-            'sku'      : product.get('sku') + (Object.values(line.opts || {})).join('_'),
-            'name'     : product.get('title.en-us'),
-            'type'     : product.get('type'),
-            'price'    : money.floatToAmount(parseFloat(price.amount)),
-            'amount'   : amount,
-            'period'   : (line.opts || {}).period,
-            'product'  : product.get('_id').toString(),
-            'currency' : payment.get('currency') || config.get('shop.currency') || 'USD',
-            'quantity' : parseInt(line.qty || 1)
-          };
-        }))).filter((item) => item.type === 'subscription');
-
-        // remove from total
-        let subscriptionTotal = parseFloat(subscriptionItems.reduce((accum, item) => {
-          // add amount
-          return money.add(accum, money.floatToAmount(parseFloat(item.price) * item.quantity));
-        }, '0.00'));
-
-        // remove amount
-        realTotal -= subscriptionTotal;
-
-        // set periods
-        let periods = {
-          'weekly' : {
-            'interval'      : 'week',
-            'interval_count' : 1
-          },
-          'monthly' : {
-            'interval'       : 'month',
-            'interval_count' : 1
-          },
-          'quarterly' : {
-            'interval'       : 'month',
-            'interval_count' : 3
-          },
-          'biannually' : {
-            'interval'       : 'month',
-            'interval_count' : 6
-          },
-          'annually' : {
-            'interval'       : 'year',
-            'interval_count' : 1
-          }
-        };
-
-        // loop subscriptions
-        await Promise.all(subscriptions.map(async (subscription) => {
-          // find item
-          let item = subscriptionItems.find((i) => i.product = subscription.get('product.id') && i.period === subscription.get('period'));
-
-          // create plan
-          let plan = await this._eway.plans.create({
-            'amount'   : zeroDecimal.indexOf(currency.toUpperCase()) > -1 ? parseInt(item.price) : parseInt(parseFloat(item.price) * 100),
-            'product'  : {
-              'name' : 'Subscription #' + subscription.get('_id').toString()
-            },
-            'interval'       : periods[item.period].interval,
-            'currency'       : item.currency,
-            'interval_count' : periods[item.period].interval_count
-          });
-
-          // set eway
-          subscription.set('plan', plan);
-        }));
-
-        // create actual subscription
-        let charge = await this._eway.subscriptions.create({
-          'items' : subscriptions.map((subscription) => {
-            return {
-              'plan' : subscription.get('plan.id')
-            };
-          }),
-          'customer' : source.customer
-        });
-
-        // loop subscriptions
-        await Promise.all(subscriptions.map(async (subscription) => {
-          // set paypal
-          subscription.set('charge', charge);
-
-          // save subscription
-          await subscription.save();
-        }));
       }
 
       // check amount
@@ -361,23 +254,29 @@ class EwayController extends PaymentMethodController {
 
       // create data
       const data = {
-        'amount'      : zeroDecimal.indexOf(currency.toUpperCase()) > -1 ? realTotal : (realTotal * 100),
-        'currency'    : currency,
-        'description' : 'Payment ID ' + payment.get('_id').toString()
+        'Payment' : {
+          'TotalAmount'        : zeroDecimal.indexOf(currency.toUpperCase()) > -1 ? realTotal : (realTotal * 100),
+          'CurrencyCode'       : currency,
+          'InvoiceReference'   : order.get('_id').toString(),
+          'InvoiceDescription' : 'Payment ID ' + payment.get('_id').toString(),
+        },
+        'Customer': {
+          'TokenCustomerID' : source.source
+        },
+        'TransactionType' : 'MOTO'
       };
 
-      // check data
-      if (payment.get('method.request')) {
-        // set source
-        data.source = source;
-      } else {
-        // set card data
-        data.source   = source.source;
-        data.customer = source.customer;
-      }
-
       // Create chargs
-      const charge = await this._eway.charges.create(data);
+      const charge = await this._eway.createTransaction(eway.Enum.Method.DIRECT, data);
+
+      // check errors
+      if (charge.attributes.Errors) {
+        // set error
+        return payment.set('error', {
+          'id'   : 'eway.' + charge.attributes.Errors.split(',')[0],
+          'text' : 'Eway error code(s): ' + charge.attributes.Errors
+        })
+      }
 
       // Set charge
       payment.set('data', {
