@@ -151,8 +151,6 @@ class EwayController extends PaymentMethodController {
         await data.save();
       }
 
-      console.log(card);
-
       // Return source
       return {
         'source' : card.Customer.TokenCustomerID
@@ -191,6 +189,7 @@ class EwayController extends PaymentMethodController {
     action.data.methods.push({
       'type'     : 'eway',
       'data'     : data ? await data.sanitise() : {},
+      'public'   : config.get('eway.client'),
       'priority' : 0
     });
   }
