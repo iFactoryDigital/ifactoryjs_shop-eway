@@ -1,7 +1,15 @@
 {
   "name": "@edenjs/shop-eway",
-  "version": "1.0.22",
   "description": "",
+  "version": "1.0.22",
+  "dependencies": {
+    "eway-rapid": "^1.2.1",
+    "money-math": "^2.5.1",
+    "uuid": "^3.3.2"
+  },
+  "engines": {
+    "node": ">= 8.0.0"
+  },
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -16,9 +24,12 @@
     "url": "https://github.com/eden-js/shop-eway/issues"
   },
   "homepage": "https://github.com/eden-js/shop-eway#readme",
-  "dependencies": {
-    "eway-rapid": "^1.2.1",
-    "money-math": "^2.5.1",
-    "uuid": "^3.3.2"
+  "devDependencies": {
+    "eslint": "^5.13.0",
+    "@edenjs/eslint-config-eden": "^2.0.14",
+    "eslint-config-airbnb": "^17.1.0",
+    "eslint-plugin-import": "^2.16.0",
+    "eslint-plugin-jsx-a11y": "^6.2.0",
+    "eslint-plugin-react": "^7.12.4"
   }
 }

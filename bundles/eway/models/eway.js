@@ -12,7 +12,7 @@ class Eway extends Model {
    * @param attrs
    * @param options
    */
-  constructor () {
+  constructor() {
     // run super
     super(...arguments);
 
@@ -25,17 +25,17 @@ class Eway extends Model {
    *
    * @return {Object}
    */
-  async sanitise () {
+  async sanitise() {
     // return sanitised bot
     return {
-      'id'    : this.get('_id') ? this.get('_id').toString() : false,
-      'cards' : (this.get('cards') || []).map((card) => {
+      id    : this.get('_id') ? this.get('_id').toString() : false,
+      cards : (this.get('cards') || []).map((card) => {
         // delete source
         delete card.source;
 
         // return card
         return card;
-      })
+      }),
     };
   }
 }
