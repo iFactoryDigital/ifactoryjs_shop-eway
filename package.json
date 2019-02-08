@@ -1,7 +1,15 @@
 {
   "name": "@edenjs/shop-eway",
-  "version": "1.0.22",
   "description": "",
+  "version": "1.0.25",
+  "dependencies": {
+    "eway-rapid": "^1.2.1",
+    "money-math": "^2.5.1",
+    "uuid": "^3.3.2"
+  },
+  "engines": {
+    "node": ">= 8.0.0"
+  },
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
