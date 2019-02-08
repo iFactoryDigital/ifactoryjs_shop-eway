@@ -298,7 +298,7 @@ class EwayController extends PaymentMethodController {
       };
 
       // hook eway payment data
-      await this.eden.hook('eway.payment.data', { data, order });
+      await this.eden.hook('eway.payment.data', { data, order, payment });
 
       // Create chargs
       const charge = await this._eway.createTransaction(eway.Enum.Method.DIRECT, data);
