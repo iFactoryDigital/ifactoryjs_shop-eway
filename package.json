@@ -20,5 +20,13 @@
     "eway-rapid": "^1.2.1",
     "money-math": "^2.5.1",
     "uuid": "^3.3.2"
+  },
+  "devDependencies": {
+    "@edenjs/eslint-config-eden": "^2.0.14",
+    "eslint": "^5.13.0",
+    "eslint-config-airbnb": "^17.1.0",
+    "eslint-plugin-import": "^2.16.0",
+    "eslint-plugin-jsx-a11y": "^6.2.0",
+    "eslint-plugin-react": "^7.12.4"
   }
 }

@@ -23,11 +23,10 @@ const ProductHelper = helper('product');
  * @extends PaymentMethodController
  */
 class EwayController extends PaymentMethodController {
-
   /**
    * Construct Eway Controller class
    */
-  constructor () {
+  constructor() {
     // Run super
     super();
 
@@ -38,7 +37,7 @@ class EwayController extends PaymentMethodController {
     this._createSource = this._createSource.bind(this);
 
     // Bind super private methods
-    this._pay    = this._pay.bind(this);
+    this._pay = this._pay.bind(this);
     this._method = this._method.bind(this);
 
     // Hook view state
@@ -57,7 +56,7 @@ class EwayController extends PaymentMethodController {
    *
    * @private
    */
-  async _createSource (payment) {
+  async _createSource(payment) {
     // Set method
     const method = payment.get('method.data');
 
@@ -66,7 +65,7 @@ class EwayController extends PaymentMethodController {
 
     // Set data
     let data = user && await Data.findOne({
-      'user.id' : user.get('_id').toString()
+      'user.id' : user.get('_id').toString(),
     });
 
     // Check card id
@@ -75,8 +74,8 @@ class EwayController extends PaymentMethodController {
       if (!user) {
         // Set error
         payment.set('error', {
-          'id'   : 'eway.nouser',
-          'text' : 'Invalid user'
+          id   : 'eway.nouser',
+          text : 'Invalid user',
         });
 
         // Return false
@@ -93,8 +92,8 @@ class EwayController extends PaymentMethodController {
       if (!card) {
         // Set error
         payment.set('error', {
-          'id'   : 'eway.notfound',
-          'text' : 'Credit card not found'
+          id   : 'eway.notfound',
+          text : 'Credit card not found',
         });
 
         // Return false
@@ -103,8 +102,8 @@ class EwayController extends PaymentMethodController {
 
       // Return source
       return {
-        'source'   : card.source,
-        'customer' : data.get('customer')
+        source   : card.source,
+        customer : data.get('customer'),
       };
     }
 
@@ -115,24 +114,24 @@ class EwayController extends PaymentMethodController {
 
       // Set customer
       const card = (await this._eway.createCustomer(eway.Enum.Method.DIRECT, {
-         'Title'       : 'Mr.',
-         'Country'     : 'au',
-         'LastName'    : req.name.split(' ')[1],
-         'FirstName'   : req.name.split(' ')[0],
-         'CardDetails' : {
-           'CVN'         : req.cvc,
-           'Name'        : req.name,
-           'Number'      : req.number,
-           'ExpiryYear'  : req.expiry.year,
-           'ExpiryMonth' : req.expiry.month
-         }
+        Title       : 'Mr.',
+        Country     : 'au',
+        LastName    : req.name.split(' ')[1],
+        FirstName   : req.name.split(' ')[0],
+        CardDetails : {
+          CVN         : req.cvc,
+          Name        : req.name,
+          Number      : req.number,
+          ExpiryYear  : req.expiry.year,
+          ExpiryMonth : req.expiry.month,
+        },
       })).attributes;
 
       // Check data and save
       if (user && !data && method.save) {
         // Create new data
         data = new Data({
-          'user' : user
+          user,
         });
       }
 
@@ -153,13 +152,13 @@ class EwayController extends PaymentMethodController {
 
       // Return source
       return {
-        'source' : card.Customer.TokenCustomerID
+        source : card.Customer.TokenCustomerID,
       };
     } catch (e) {
       // Set error
       payment.set('error', {
-        'id'   : 'eway.error',
-        'text' : e.toString()
+        id   : 'eway.error',
+        text : e.toString(),
       });
 
       // Return false
@@ -176,21 +175,21 @@ class EwayController extends PaymentMethodController {
    * @async
    * @private
    */
-  async _method (order, action) {
+  async _method(order, action) {
     // Check super
     if (!await super._method(order, action)) return;
 
     // Load Eway data for user
     const data = await Data.findOne({
-      'user.id' : order.get('user.id')
+      'user.id' : order.get('user.id'),
     });
 
     // Add Eway Payment Method
     action.data.methods.push({
-      'type'     : 'eway',
-      'data'     : data ? await data.sanitise() : {},
-      'public'   : config.get('eway.client'),
-      'priority' : 0
+      type     : 'eway',
+      data     : data ? await data.sanitise() : {},
+      public   : config.get('eway.client'),
+      priority : 0,
     });
   }
 
@@ -202,7 +201,7 @@ class EwayController extends PaymentMethodController {
    * @async
    * @private
    */
-  async _pay (payment) {
+  async _pay(payment) {
     // Check super
     if (!await super._pay(payment) || payment.get('method.type') !== 'eway') return;
 
@@ -222,9 +221,41 @@ class EwayController extends PaymentMethodController {
     if (!source) return;
 
     // get invoice details
-    let invoice       = await payment.get('invoice');
-    let order         = await invoice.get('order');
-    let subscriptions = await order.get('subscriptions');
+    const invoice       = await payment.get('invoice');
+    const order         = await invoice.get('order');
+    const subscriptions = await order.get('subscriptions');
+
+    // let items
+    const items = await Promise.all(invoice.get('lines').map(async (line) => {
+      // get product
+      const product = await Product.findById(line.product);
+
+      // get price
+      const price = await ProductHelper.price(product, line.opts || {});
+
+      // return value
+      const amount = parseFloat(price.amount) * parseInt(line.qty || 1);
+
+      // hook
+      await this.eden.hook('line.price', {
+        qty  : line.qty,
+        user : await order.get('user'),
+        opts : line.opts,
+
+        order,
+        price,
+        amount,
+        product,
+      });
+
+      // return object
+      return {
+        SKU         : product.get('sku') + (Object.values(line.opts || {})).join('_'),
+        Total       : money.floatToAmount(parseFloat(price.amount)),
+        Quantity    : parseInt(line.qty),
+        Description : product.get('title.en-us'),
+      };
+    }));
 
     // Get currency
     const currency = payment.get('currency').toLowerCase() || 'usd';
@@ -235,7 +266,7 @@ class EwayController extends PaymentMethodController {
     // Run try/catch
     try {
       // get real total
-      let realTotal = payment.get('amount');
+      const realTotal = payment.get('amount');
 
       // get subscriptions
       if (subscriptions && subscriptions.length) {
@@ -253,17 +284,21 @@ class EwayController extends PaymentMethodController {
 
       // create data
       const data = {
-        'Payment' : {
-          'TotalAmount'        : zeroDecimal.indexOf(currency.toUpperCase()) > -1 ? realTotal : (realTotal * 100),
-          'CurrencyCode'       : currency,
-          'InvoiceReference'   : order.get('_id').toString(),
-          'InvoiceDescription' : 'Payment ID ' + payment.get('_id').toString(),
+      //  Items   : items,
+        Payment : {
+          TotalAmount        : zeroDecimal.indexOf(currency.toUpperCase()) > -1 ? realTotal : (realTotal * 100),
+          CurrencyCode       : currency,
+          InvoiceReference   : order.get('_id').toString(),
+          InvoiceDescription : `Payment ID ${payment.get('_id').toString()}`,
         },
-        'Customer': {
-          'TokenCustomerID' : source.source
+        Customer : {
+          TokenCustomerID : source.source,
         },
-        'TransactionType' : 'MOTO'
+        TransactionType : 'MOTO',
       };
+
+      // hook eway payment data
+      await this.eden.hook('eway.payment.data', { data, order });
 
       // Create chargs
       const charge = await this._eway.createTransaction(eway.Enum.Method.DIRECT, data);
@@ -272,14 +307,14 @@ class EwayController extends PaymentMethodController {
       if (charge.attributes.Errors) {
         // set error
         return payment.set('error', {
-          'id'   : 'eway.' + charge.attributes.Errors.split(',')[0],
-          'text' : 'Eway error code(s): ' + charge.attributes.Errors
-        })
+          id   : `eway.${charge.attributes.Errors.split(',')[0]}`,
+          text : `Eway error code(s): ${charge.attributes.Errors}`,
+        });
       }
 
       // Set charge
       payment.set('data', {
-        'charge' : charge
+        charge,
       });
 
       // Set complete
@@ -287,15 +322,14 @@ class EwayController extends PaymentMethodController {
     } catch (e) {
       // Set error
       payment.set('error', {
-        'id'   : 'eway.error',
-        'text' : e.toString()
+        id   : 'eway.error',
+        text : e.toString(),
       });
 
       // Set not complete
       payment.set('complete', false);
     }
   }
-
 }
 
 /**
