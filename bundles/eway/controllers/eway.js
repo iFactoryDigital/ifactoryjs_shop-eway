@@ -147,7 +147,7 @@ class EwayController extends PaymentMethodController {
         data.set('cards', cards);
 
         // Save data
-        await data.save();
+        await data.save(user);
       }
 
       // Return source
