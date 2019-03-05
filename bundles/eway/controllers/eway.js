@@ -200,10 +200,11 @@ class EwayController extends PaymentMethodController {
    *
    * @async
    * @private
+   * @return {*}
    */
   async _pay(payment) {
     // Check super
-    if (!await super._pay(payment) || payment.get('method.type') !== 'eway') return;
+    if (!await super._pay(payment) || payment.get('method.type') !== 'eway') return null;
 
     // set source
     let source = null;
@@ -218,7 +219,7 @@ class EwayController extends PaymentMethodController {
     }
 
     // Check source
-    if (!source) return;
+    if (!source) return null;
 
     // get invoice details
     const invoice       = await payment.get('invoice');
@@ -252,7 +253,7 @@ class EwayController extends PaymentMethodController {
       return {
         SKU         : product.get('sku') + (Object.values(line.opts || {})).join('_'),
         Total       : money.floatToAmount(parseFloat(price.amount)),
-        Quantity    : parseInt(line.qty),
+        Quantity    : parseInt(line.qty, 10),
         Description : product.get('title.en-us'),
       };
     }));
@@ -279,7 +280,7 @@ class EwayController extends PaymentMethodController {
         payment.set('complete', true);
 
         // return
-        return;
+        return null;
       }
 
       // create data
@@ -309,6 +310,15 @@ class EwayController extends PaymentMethodController {
         return payment.set('error', {
           id   : `eway.${charge.attributes.Errors.split(',')[0]}`,
           text : `Eway error code(s): ${charge.attributes.Errors}`,
+        });
+      }
+
+      // check errors
+      if (!charge.attributes.TransactionStatus) {
+        // set error
+        return payment.set('error', {
+          id   : `eway.${charge.ResponseCode}`,
+          text : `Eway error code(s): ${charge.ResponseCode}`,
         });
       }
 
