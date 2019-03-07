@@ -309,7 +309,7 @@ class EwayController extends PaymentMethodController {
         // set error
         return payment.set('error', {
           id   : `eway.${charge.attributes.Errors.split(',')[0]}`,
-          text : `Eway error code(s): ${charge.attributes.Errors}`,
+          text : charge.attributes.Errors.split(',').map(code => eway.getMessage(code.trim())).join(', '),
         });
       }
 
@@ -318,7 +318,7 @@ class EwayController extends PaymentMethodController {
         // set error
         return payment.set('error', {
           id   : `eway.${charge.ResponseCode}`,
-          text : `Eway error code(s): ${charge.ResponseCode}`,
+          text : eway.getMessage(charge.ResponseCode),
         });
       }
 
