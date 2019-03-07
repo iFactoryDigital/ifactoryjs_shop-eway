@@ -309,7 +309,7 @@ class EwayController extends PaymentMethodController {
         // set error
         return payment.set('error', {
           id   : `eway.${charge.attributes.Errors.split(',')[0]}`,
-          text : charge.attributes.Errors.split(',').map(code => eway.getMessage(code.trim())).join(', '),
+          text : 'You have entered an incorrect card number or expiry date. Only Visa and Mastercard are accepted. Please ensure your card has sufficient funds to complete the purchase.',
         });
       }
 
@@ -318,7 +318,7 @@ class EwayController extends PaymentMethodController {
         // set error
         return payment.set('error', {
           id   : `eway.${charge.ResponseCode}`,
-          text : eway.getMessage(charge.ResponseCode),
+          text : 'You have entered an incorrect card number or expiry date. Only Visa and Mastercard are accepted. Please ensure your card has sufficient funds to complete the purchase.',
         });
       }
 
