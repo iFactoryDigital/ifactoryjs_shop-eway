@@ -1,8 +1,6 @@
 
 // Require dependencies
-const eway  = require('eway-rapid');
-const uuid  = require('uuid');
-const money = require('money-math');
+const eway = require('eway-rapid');
 
 // Require local dependencies
 const config = require('config');
@@ -11,11 +9,7 @@ const config = require('config');
 const PaymentMethodController = require('payment/controllers/method');
 
 // Require models
-const Data    = model('eway');
-const Product = model('product');
-
-// require helpers
-const ProductHelper = helper('product');
+const Data = model('eway');
 
 /**
  * Create Eway Controller class
@@ -223,38 +217,17 @@ class EwayController extends PaymentMethodController {
 
     // get invoice details
     const invoice       = await payment.get('invoice');
-    const order         = await invoice.get('order');
-    const subscriptions = await order.get('subscriptions');
+    const orders        = await invoice.get('orders');
+    const subscriptions = [].concat(...(await Promise.all(orders.map(order => order.get('subscriptions')))));
 
     // let items
     const items = await Promise.all(invoice.get('lines').map(async (line) => {
-      // get product
-      const product = await Product.findById(line.product);
-
-      // get price
-      const price = await ProductHelper.price(product, line.opts || {});
-
-      // return value
-      const amount = parseFloat(price.amount) * parseInt(line.qty || 1);
-
-      // hook
-      await this.eden.hook('line.price', {
-        qty  : line.qty,
-        user : await order.get('user'),
-        opts : line.opts,
-
-        order,
-        price,
-        amount,
-        product,
-      });
-
       // return object
       return {
-        SKU         : product.get('sku') + (Object.values(line.opts || {})).join('_'),
-        Total       : money.floatToAmount(parseFloat(price.amount)),
+        SKU         : line.sku,
+        Total       : line.amount,
         Quantity    : parseInt(line.qty, 10),
-        Description : product.get('title.en-us'),
+        Description : line.title,
       };
     }));
 
@@ -289,7 +262,7 @@ class EwayController extends PaymentMethodController {
         Payment : {
           TotalAmount        : zeroDecimal.indexOf(currency.toUpperCase()) > -1 ? realTotal : (realTotal * 100),
           CurrencyCode       : currency,
-          InvoiceReference   : order.get('_id').toString(),
+          InvoiceReference   : orders.map(order => order.get('_id').toString()).join(', '),
           InvoiceDescription : `Payment ID ${payment.get('_id').toString()}`,
         },
         Customer : {
@@ -298,8 +271,11 @@ class EwayController extends PaymentMethodController {
         TransactionType : 'MOTO',
       };
 
-      // hook eway payment data
-      await this.eden.hook('eway.payment.data', { data, order, payment });
+      // map orders
+      await Promise.all(orders.map((order) => {
+        // hook eway payment data
+        return this.eden.hook('eway.payment.data', { data, order, payment });
+      }));
 
       // Create chargs
       const charge = await this._eway.createTransaction(eway.Enum.Method.DIRECT, data);
@@ -339,6 +315,9 @@ class EwayController extends PaymentMethodController {
       // Set not complete
       payment.set('complete', false);
     }
+
+    // return done
+    return true;
   }
 }
 
