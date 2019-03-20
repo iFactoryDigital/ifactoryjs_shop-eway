@@ -1,7 +1,7 @@
 {
   "name": "@edenjs/shop-eway",
   "description": "",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "dependencies": {
     "eway-rapid": "^1.2.1",
     "money-math": "^2.5.1",
