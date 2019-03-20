@@ -200,6 +200,12 @@ class EwayController extends PaymentMethodController {
     // Check super
     if (!await super._pay(payment) || payment.get('method.type') !== 'eway') return null;
 
+    // lock payment
+    const unlock = await this.eden.lock(`payment.${payment.get('_id').toString()}.eway`);
+
+    // check complete
+    if (payment.get('complete')) return unlock();
+
     // set source
     let source = null;
 
@@ -213,7 +219,13 @@ class EwayController extends PaymentMethodController {
     }
 
     // Check source
-    if (!source) return null;
+    if (!source) {
+      // unlock
+      unlock();
+
+      // return
+      return null;
+    }
 
     // get invoice details
     const invoice       = await payment.get('invoice');
@@ -249,6 +261,9 @@ class EwayController extends PaymentMethodController {
 
       // check amount
       if (!realTotal || realTotal < 0) {
+        // unlock
+        unlock();
+
         // Set complete
         payment.set('complete', true);
 
@@ -291,6 +306,9 @@ class EwayController extends PaymentMethodController {
 
       // check errors
       if (!charge.attributes.TransactionStatus) {
+        // unlock
+        unlock();
+
         // set error
         return payment.set('error', {
           id   : `eway.${charge.ResponseCode}`,
@@ -315,6 +333,9 @@ class EwayController extends PaymentMethodController {
       // Set not complete
       payment.set('complete', false);
     }
+
+    // unlock
+    unlock();
 
     // return done
     return true;
