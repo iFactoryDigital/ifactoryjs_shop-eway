@@ -24,11 +24,6 @@
     "url": "https://github.com/eden-js/shop-eway/issues"
   },
   "homepage": "https://github.com/eden-js/shop-eway#readme",
-  "dependencies": {
-    "eway-rapid": "^1.2.1",
-    "money-math": "^2.5.1",
-    "uuid": "^3.3.2"
-  },
   "devDependencies": {
     "@edenjs/eslint-config-eden": "^2.0.14",
     "eslint": "^5.13.0",
