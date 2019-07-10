@@ -77,9 +77,9 @@ class EwayController extends PaymentMethodController {
       }
 
       // find card
-      const card = data && (data.get('cards') || []).find((card) => {
+      const card = data && (data.get('cards') || []).find((c) => {
         // Return card id check
-        return card.id = method.card.id;
+        return c.id === method.card.id;
       });
 
       // Check data
@@ -232,17 +232,6 @@ class EwayController extends PaymentMethodController {
     const orders        = await invoice.get('orders');
     const subscriptions = [].concat(...(await Promise.all(orders.map(order => order.get('subscriptions')))));
 
-    // let items
-    const items = await Promise.all(invoice.get('lines').map(async (line) => {
-      // return object
-      return {
-        SKU         : line.sku,
-        Total       : line.amount,
-        Quantity    : parseInt(line.qty, 10),
-        Description : line.title,
-      };
-    }));
-
     // Get currency
     const currency = payment.get('currency').toLowerCase() || 'usd';
 
@@ -256,7 +245,7 @@ class EwayController extends PaymentMethodController {
 
       // get subscriptions
       if (subscriptions && subscriptions.length) {
-
+        // @todo subscriptions
       }
 
       // check amount
@@ -275,6 +264,7 @@ class EwayController extends PaymentMethodController {
       const data = {
       //  Items   : items,
         Payment : {
+          // eslint-disable-next-line max-len
           TotalAmount        : zeroDecimal.indexOf(currency.toUpperCase()) > -1 ? realTotal : (realTotal * 100),
           CurrencyCode       : currency,
           InvoiceReference   : orders.map(order => order.get('_id').toString()).join(', '),
@@ -347,4 +337,4 @@ class EwayController extends PaymentMethodController {
  *
  * @type {EwayController}
  */
-exports = module.exports = EwayController;
+module.exports = EwayController;
