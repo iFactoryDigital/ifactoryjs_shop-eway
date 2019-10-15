@@ -1,5 +1,5 @@
 {
-  "name": "@edenjs/shop-eway",
+  "name": "@ifactoryjs/shop-eway",
   "description": "",
   "version": "1.1.2",
   "dependencies": {
@@ -16,14 +16,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/eden-js/shop-eway.git"
+    "url": "git+https://github.com/ifactorydigital/ifactoryjs_shop-eway.git"
   },
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/eden-js/shop-eway/issues"
+    "url": "https://github.com/ifactorydigital/ifactoryjs_shop-eway/issues"
   },
-  "homepage": "https://github.com/eden-js/shop-eway#readme",
+  "homepage": "https://github.com/ifactorydigital/ifactoryjs_shop-eway#readme",
   "devDependencies": {
     "@edenjs/eslint-config-eden": "^2.0.14",
     "eslint": "^5.13.0",
